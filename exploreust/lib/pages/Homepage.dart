@@ -96,9 +96,11 @@ class _HomepageState extends State<Homepage> {
   }
 
   Future<void> _fetchAllData() async {
-    setState(() {
-      loading = true;
-    });
+    if (mounted) {
+      setState(() {
+        loading = true;
+      });
+    }
     final supabase = Supabase.instance.client;
     try {
       final userResp =
@@ -124,35 +126,43 @@ class _HomepageState extends State<Homepage> {
           .from('linked_services')
           .select()
           .eq('user_id', userId);
-      setState(() {
-        userProfile = userResp;
-        courses = List<Map<String, dynamic>>.from(coursesResp);
-        announcements = List<Map<String, dynamic>>.from(annResp);
-        bookmarks = List<Map<String, dynamic>>.from(bookmarksResp);
-        savedEvents = List<Map<String, dynamic>>.from(savedEventsResp);
-        linkedServices = List<Map<String, dynamic>>.from(linkedResp);
-        loading = false;
-      });
+      if (mounted) {
+        setState(() {
+          userProfile = userResp;
+          courses = List<Map<String, dynamic>>.from(coursesResp);
+          announcements = List<Map<String, dynamic>>.from(annResp);
+          bookmarks = List<Map<String, dynamic>>.from(bookmarksResp);
+          savedEvents = List<Map<String, dynamic>>.from(savedEventsResp);
+          linkedServices = List<Map<String, dynamic>>.from(linkedResp);
+          loading = false;
+        });
+      }
     } catch (e) {
       print('Error fetching homepage data: $e');
-      setState(() {
-        loading = false;
-      });
+      if (mounted) {
+        setState(() {
+          loading = false;
+        });
+      }
     }
   }
 
   Future<void> _fetchWeather() async {
-    setState(() {
-      _weatherLoading = true;
-    });
+    if (mounted) {
+      setState(() {
+        _weatherLoading = true;
+      });
+    }
     try {
       LocationPermission permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
         if (permission == LocationPermission.denied) {
-          setState(() {
-            _weatherLoading = false;
-          });
+          if (mounted) {
+            setState(() {
+              _weatherLoading = false;
+            });
+          }
           return;
         }
       }
@@ -168,20 +178,26 @@ class _HomepageState extends State<Homepage> {
       final response = await http.get(Uri.parse(url));
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
-        setState(() {
-          _temperature = data['main']['temp']?.toDouble();
-          _weatherIcon = data['weather'][0]['icon'];
-          _weatherLoading = false;
-        });
+        if (mounted) {
+          setState(() {
+            _temperature = data['main']['temp']?.toDouble();
+            _weatherIcon = data['weather'][0]['icon'];
+            _weatherLoading = false;
+          });
+        }
       } else {
+        if (mounted) {
+          setState(() {
+            _weatherLoading = false;
+          });
+        }
+      }
+    } catch (e) {
+      if (mounted) {
         setState(() {
           _weatherLoading = false;
         });
       }
-    } catch (e) {
-      setState(() {
-        _weatherLoading = false;
-      });
     }
   }
 
