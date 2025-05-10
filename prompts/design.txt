@@ -1,0 +1,11 @@
+	•	Rounded cards with shadow and depth
+	•	Accent colors
+	•	Clear section labels (e.g., Exchange Rate, Bank Summary)
+	•	Large, legible font sizes with ample padding
+	•	Horizontal tab filters (like Loan | Securities | All)
+	•	Bottom navigation bar with icons and labels
+	•	Simple buttons like ‘Transfer’ and ‘Get Now’ beside card content
+	•	Minimal icon usage with strong alignment and spacing
+	•	Micro-interactions and hover/touch feedback for buttons and cards”
+
+Target layout: Compact, information-dense but uncluttered. Mobile-first, scalable to tablets.
