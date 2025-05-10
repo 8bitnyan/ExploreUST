@@ -1,8 +1,69 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../components/ClickyContainer.dart';
 
-class ProfilePage extends StatelessWidget {
+class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
+
+  @override
+  State<ProfilePage> createState() => _ProfilePageState();
+}
+
+class _ProfilePageState extends State<ProfilePage> {
+  static const String userId = 'e6be865f-a429-4209-8e57-8c94789f4068';
+
+  Map<String, dynamic>? userProfile;
+  List<Map<String, dynamic>> courses = [];
+  List<Map<String, dynamic>> bookmarks = [];
+  List<Map<String, dynamic>> savedEvents = [];
+  List<Map<String, dynamic>> linkedServices = [];
+  bool loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchAllData();
+  }
+
+  Future<void> _fetchAllData() async {
+    setState(() {
+      loading = true;
+    });
+    final supabase = Supabase.instance.client;
+    try {
+      final userResp =
+          await supabase.from('users').select().eq('id', userId).single();
+      final coursesResp = await supabase
+          .from('courses')
+          .select()
+          .eq('user_id', userId);
+      final bookmarksResp = await supabase
+          .from('bookmarks')
+          .select('*,location:location_id(*)')
+          .eq('user_id', userId);
+      final savedEventsResp = await supabase
+          .from('saved_events')
+          .select('*,event:event_id(*)')
+          .eq('user_id', userId);
+      final linkedResp = await supabase
+          .from('linked_services')
+          .select()
+          .eq('user_id', userId);
+      setState(() {
+        userProfile = userResp;
+        courses = List<Map<String, dynamic>>.from(coursesResp);
+        bookmarks = List<Map<String, dynamic>>.from(bookmarksResp);
+        savedEvents = List<Map<String, dynamic>>.from(savedEventsResp);
+        linkedServices = List<Map<String, dynamic>>.from(linkedResp);
+        loading = false;
+      });
+    } catch (e) {
+      print('Error fetching profile data: $e');
+      setState(() {
+        loading = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -10,6 +71,10 @@ class ProfilePage extends StatelessWidget {
     final cardShape = RoundedRectangleBorder(
       borderRadius: BorderRadius.circular(18),
     );
+
+    if (loading) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
 
     return SafeArea(
       child: ListView(
@@ -53,36 +118,40 @@ class ProfilePage extends StatelessWidget {
                 children: [
                   CircleAvatar(
                     radius: 36,
-                    backgroundImage: AssetImage(
-                      'assets/profile_placeholder.png',
-                    ), // Replace with actual image asset or network
-                    child: Icon(
-                      Icons.person,
-                      size: 40,
-                      color: Colors.grey.shade400,
-                    ),
+                    backgroundImage:
+                        userProfile?['avatar_url'] != null
+                            ? NetworkImage(userProfile!['avatar_url'])
+                            : null,
+                    child:
+                        userProfile?['avatar_url'] == null
+                            ? Icon(
+                              Icons.person,
+                              size: 40,
+                              color: Colors.grey.shade400,
+                            )
+                            : null,
                   ),
                   const SizedBox(width: 18),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
-                      children: const [
+                      children: [
                         Text(
-                          'Alex Chan',
-                          style: TextStyle(
+                          userProfile?['name'] ?? '',
+                          style: const TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 20,
                           ),
                         ),
-                        SizedBox(height: 4),
+                        const SizedBox(height: 4),
                         Text(
-                          'Student ID: 20712345',
-                          style: TextStyle(fontSize: 15),
+                          'Student ID: ${userProfile?['student_id'] ?? ''}',
+                          style: const TextStyle(fontSize: 15),
                         ),
-                        SizedBox(height: 4),
-                        Text('BEng in Computer Science'),
-                        SizedBox(height: 2),
-                        Text('Year 3'),
+                        const SizedBox(height: 4),
+                        Text(userProfile?['program'] ?? ''),
+                        const SizedBox(height: 2),
+                        Text('Year ${userProfile?['year'] ?? ''}'),
                       ],
                     ),
                   ),
@@ -115,7 +184,11 @@ class ProfilePage extends StatelessWidget {
                     size: 28,
                   ),
                   title: const Text('Enrolled Courses'),
-                  subtitle: const Text('COMP4521, MATH1010, HUMA1000'),
+                  subtitle: Text(
+                    courses.isEmpty
+                        ? 'No courses'
+                        : courses.map((c) => c['code']).join(', '),
+                  ),
                 ),
                 ListTile(
                   leading: const Icon(
@@ -161,7 +234,14 @@ class ProfilePage extends StatelessWidget {
                   child: ListTile(
                     leading: const Icon(Icons.bookmark, color: Colors.red),
                     title: const Text('Bookmarked Locations'),
-                    subtitle: const Text('LG7 Study Room, UniBistro'),
+                    subtitle: Text(
+                      bookmarks.isEmpty
+                          ? 'No bookmarks'
+                          : bookmarks
+                              .map((b) => b['location']?['name'])
+                              .where((n) => n != null)
+                              .join(', '),
+                    ),
                     trailing: Icon(Icons.chevron_right),
                   ),
                 ),
@@ -170,7 +250,14 @@ class ProfilePage extends StatelessWidget {
                   child: ListTile(
                     leading: const Icon(Icons.event, color: Colors.deepPurple),
                     title: const Text('Saved Events'),
-                    subtitle: const Text('AI Seminar, Career Fair'),
+                    subtitle: Text(
+                      savedEvents.isEmpty
+                          ? 'No saved events'
+                          : savedEvents
+                              .map((e) => e['event']?['title'])
+                              .where((t) => t != null)
+                              .join(', '),
+                    ),
                     trailing: Icon(Icons.chevron_right),
                   ),
                 ),
@@ -179,7 +266,14 @@ class ProfilePage extends StatelessWidget {
                   child: ListTile(
                     leading: const Icon(Icons.link, color: Colors.blue),
                     title: const Text('Linked Services'),
-                    subtitle: const Text('Canvas, Library, SIS'),
+                    subtitle: Text(
+                      linkedServices.isEmpty
+                          ? 'No linked services'
+                          : linkedServices
+                              .map((s) => s['service_name'])
+                              .where((n) => n != null)
+                              .join(', '),
+                    ),
                     trailing: Icon(Icons.chevron_right),
                   ),
                 ),

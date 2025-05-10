@@ -37,6 +37,10 @@ dependencies:
   google_maps_flutter: ^2.6.0
   clicky_flutter: ^0.0.1
   geolocator: ^10.1.0
+  flutter_map: ^7.0.0
+  supabase_flutter: ^2.3.4
+  table_calendar: ^3.0.9
+  badges: ^3.1.2
 
 dev_dependencies:
   flutter_test:

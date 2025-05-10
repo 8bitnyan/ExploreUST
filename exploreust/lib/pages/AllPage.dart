@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../components/ClickyIconButton.dart';
 import '../components/ClickyContainer.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import '../features/mock_data_tool.dart';
 
 class AllPage extends StatefulWidget {
   const AllPage({super.key});
@@ -70,6 +72,23 @@ class _AllPageState extends State<AllPage> {
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
+            // DEV: Insert mock data button (only in debug mode)
+            if (!bool.fromEnvironment('dart.vm.product'))
+              Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: ElevatedButton.icon(
+                  icon: const Icon(Icons.bug_report, color: Colors.red),
+                  label: const Text('Insert Mock Data for Demo User'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.red.shade50,
+                    foregroundColor: Colors.red,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  onPressed: () => insertMockDataForDemoUser(context),
+                ),
+              ),
             // Top Row: User name and action buttons
             Row(
               children: [

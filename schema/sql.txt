@@ -1,0 +1,134 @@
+-- Enable uuid extension (if not already enabled)
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
+-- 1. users (profile table, auth handled by Supabase)
+CREATE TABLE public.users (
+    id uuid PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+    email text NOT NULL,
+    name text,
+    student_id text,
+    program text,
+    year int,
+    avatar_url text,
+    created_at timestamptz DEFAULT now()
+);
+
+-- 2. locations
+CREATE TABLE public.locations (
+    id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+    name text NOT NULL,
+    description text,
+    lat float8,
+    lng float8,
+    type text
+);
+
+-- 3. events
+CREATE TABLE public.events (
+    id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+    title text NOT NULL,
+    description text,
+    date timestamptz NOT NULL,
+    location_id uuid REFERENCES public.locations(id),
+    tags text[],
+    organizer text,
+    speaker text,
+    agenda text,
+    bookable boolean DEFAULT false,
+    cap int,
+    created_at timestamptz DEFAULT now()
+);
+
+-- 4. event_bookings
+CREATE TABLE public.event_bookings (
+    id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+    event_id uuid REFERENCES public.events(id) ON DELETE CASCADE,
+    user_id uuid REFERENCES public.users(id) ON DELETE CASCADE,
+    booked_at timestamptz DEFAULT now(),
+    UNIQUE (event_id, user_id)
+);
+
+-- 5. bus_schedules
+CREATE TABLE public.bus_schedules (
+    id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+    route text NOT NULL,
+    direction text NOT NULL, -- 'To Campus' or 'From Campus'
+    times text[],            -- e.g. ['08:00', '08:30']
+    days text[]              -- e.g. ['Mon', 'Tue']
+);
+
+-- 6. courses
+CREATE TABLE public.courses (
+    id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+    code text NOT NULL,
+    name text,
+    instructor text,
+    location text,
+    schedule text,
+    user_id uuid REFERENCES public.users(id) ON DELETE CASCADE -- if personalized
+);
+
+-- 7. bookmarks
+CREATE TABLE public.bookmarks (
+    id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id uuid REFERENCES public.users(id) ON DELETE CASCADE,
+    location_id uuid REFERENCES public.locations(id) ON DELETE CASCADE,
+    created_at timestamptz DEFAULT now(),
+    UNIQUE (user_id, location_id)
+);
+
+-- 8. saved_events
+CREATE TABLE public.saved_events (
+    id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id uuid REFERENCES public.users(id) ON DELETE CASCADE,
+    event_id uuid REFERENCES public.events(id) ON DELETE CASCADE,
+    created_at timestamptz DEFAULT now(),
+    UNIQUE (user_id, event_id)
+);
+
+-- 9. linked_services
+CREATE TABLE public.linked_services (
+    id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id uuid REFERENCES public.users(id) ON DELETE CASCADE,
+    service_name text NOT NULL,
+    linked_at timestamptz DEFAULT now()
+);
+
+-- 10. support_requests
+CREATE TABLE public.support_requests (
+    id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id uuid REFERENCES public.users(id) ON DELETE CASCADE,
+    type text, -- 'Bug', 'Feature', 'Support'
+    message text,
+    created_at timestamptz DEFAULT now(),
+    status text DEFAULT 'Open'
+);
+
+-- 11. lost_and_found (optional)
+CREATE TABLE public.lost_and_found (
+    id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id uuid REFERENCES public.users(id) ON DELETE CASCADE,
+    item text,
+    description text,
+    found_at timestamptz,
+    location_id uuid REFERENCES public.locations(id),
+    status text -- 'Lost', 'Found', 'Claimed'
+);
+
+-- 12. announcements (optional)
+CREATE TABLE public.announcements (
+    id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+    title text NOT NULL,
+    content text,
+    created_at timestamptz DEFAULT now(),
+    type text -- 'Academic', 'Alert', etc.
+);
+
+-- Indexes for performance (optional but recommended)
+CREATE INDEX idx_events_date ON public.events(date);
+CREATE INDEX idx_event_bookings_user ON public.event_bookings(user_id);
+CREATE INDEX idx_event_bookings_event ON public.event_bookings(event_id);
+CREATE INDEX idx_courses_user ON public.courses(user_id);
+CREATE INDEX idx_bookmarks_user ON public.bookmarks(user_id);
+CREATE INDEX idx_saved_events_user ON public.saved_events(user_id);
+CREATE INDEX idx_support_requests_user ON public.support_requests(user_id);

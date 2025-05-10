@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import '../components/ClickyContainer.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:table_calendar/table_calendar.dart';
+import 'package:badges/badges.dart' as badges;
 
 class EventsPage extends StatefulWidget {
   const EventsPage({super.key});
@@ -9,98 +12,65 @@ class EventsPage extends StatefulWidget {
 }
 
 class _EventsPageState extends State<EventsPage> {
-  // Mock event data
-  final List<Map<String, dynamic>> events = [
-    {
-      'title': 'AI Career Talk',
-      'date': DateTime.now().add(const Duration(days: 1, hours: 2)),
-      'location': 'LT-A',
-      'tags': ['Academic', 'Talk'],
-      'organizer': 'Career Center',
-      'description':
-          'Join us for an insightful talk on AI careers. Learn from industry experts and network with peers.',
-      'speaker': 'Dr. Jane Smith',
-      'agenda': 'Intro, Keynote, Q&A',
-      'bookable': true,
-      'booked': false,
-      'seats': 120,
-      'cap': 150,
-    },
-    {
-      'title': 'Coding Club Hackathon',
-      'date': DateTime.now().add(const Duration(days: 3)),
-      'location': 'LG7 Common Room',
-      'tags': ['Club', 'Workshop'],
-      'organizer': 'Coding Club',
-      'description':
-          '24-hour hackathon with prizes and food. Form teams and build something cool!',
-      'speaker': 'N/A',
-      'agenda': 'Kickoff, Hacking, Demos',
-      'bookable': true,
-      'booked': true,
-      'seats': 80,
-      'cap': 100,
-    },
-    {
-      'title': 'Public Art Tour',
-      'date': DateTime.now().add(const Duration(days: 2, hours: 5)),
-      'location': 'Atrium',
-      'tags': ['Public', 'Tour'],
-      'organizer': 'Art Society',
-      'description': 'Explore campus art installations with a guided tour.',
-      'speaker': 'Prof. Lee',
-      'agenda': 'Tour, Q&A',
-      'bookable': false,
-      'booked': false,
-      'seats': 0,
-      'cap': 0,
-    },
-  ];
+  static const String userId = 'e6be865f-a429-4209-8e57-8c94789f4068';
 
-  String searchQuery = '';
-  String filterType = 'All';
-  String filterDate = 'All';
-  String filterLocation = 'All';
-  bool filterBookable = false;
-  bool pushNotifications = true;
+  List<Map<String, dynamic>> events = [];
+  Set<String> bookedEventIds = {};
+  bool loading = true;
+  DateTime _focusedDay = DateTime.now();
+  DateTime? _selectedDay = DateTime.now();
 
-  List<Map<String, dynamic>> get filteredEvents {
-    return events.where((event) {
-        final matchesSearch =
-            searchQuery.isEmpty ||
-            event['title'].toLowerCase().contains(searchQuery.toLowerCase()) ||
-            event['tags'].any(
-              (tag) => tag.toLowerCase().contains(searchQuery.toLowerCase()),
-            );
-        final matchesType =
-            filterType == 'All' || event['tags'].contains(filterType);
-        final matchesBookable = !filterBookable || event['bookable'] == true;
-        // Date filter (simple)
-        final now = DateTime.now();
-        bool matchesDate = true;
-        if (filterDate == 'Today') {
-          matchesDate =
-              event['date'].day == now.day &&
-              event['date'].month == now.month &&
-              event['date'].year == now.year;
-        } else if (filterDate == 'This Week') {
-          final weekFromNow = now.add(const Duration(days: 7));
-          matchesDate =
-              event['date'].isAfter(now) && event['date'].isBefore(weekFromNow);
-        }
-        final matchesLocation =
-            filterLocation == 'All' || event['location'] == filterLocation;
-        return matchesSearch &&
-            matchesType &&
-            matchesDate &&
-            matchesLocation &&
-            matchesBookable;
-      }).toList()
-      ..sort((a, b) => a['date'].compareTo(b['date']));
+  @override
+  void initState() {
+    super.initState();
+    _focusedDay = DateTime.now();
+    _selectedDay = DateTime.now();
+    _fetchEvents();
   }
 
-  List<Map<String, dynamic>> get myBookings =>
-      events.where((e) => e['booked'] == true).toList();
+  Future<void> _fetchEvents() async {
+    setState(() {
+      loading = true;
+    });
+    final supabase = Supabase.instance.client;
+    try {
+      final eventsResp = await supabase.from('events').select().order('date');
+      final bookingsResp = await supabase
+          .from('event_bookings')
+          .select('event_id')
+          .eq('user_id', userId);
+      setState(() {
+        events = List<Map<String, dynamic>>.from(eventsResp);
+        bookedEventIds = Set<String>.from(
+          bookingsResp.map((b) => b['event_id']),
+        );
+        loading = false;
+      });
+    } catch (e) {
+      print('Error fetching events: $e');
+      setState(() {
+        loading = false;
+      });
+    }
+  }
+
+  // Map<DateTime, List<Map<String, dynamic>>> for eventLoader
+  Map<DateTime, List<Map<String, dynamic>>> get _eventsByDay {
+    final map = <DateTime, List<Map<String, dynamic>>>{};
+    for (final event in events) {
+      final eventDate = DateTime.tryParse(event['date'] ?? '');
+      if (eventDate != null) {
+        final day = DateTime(eventDate.year, eventDate.month, eventDate.day);
+        map.putIfAbsent(day, () => []).add(event);
+      }
+    }
+    return map;
+  }
+
+  List<Map<String, dynamic>> _getEventsForDay(DateTime day) {
+    final key = DateTime(day.year, day.month, day.day);
+    return _eventsByDay[key] ?? [];
+  }
 
   void showEventDetails(Map<String, dynamic> event) {
     showModalBottomSheet(
@@ -121,7 +91,7 @@ class _EventsPageState extends State<EventsPage> {
                   children: [
                     Expanded(
                       child: Text(
-                        event['title'],
+                        event['title'] ?? '',
                         style: const TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 22,
@@ -143,7 +113,11 @@ class _EventsPageState extends State<EventsPage> {
                       color: Colors.blue.shade400,
                     ),
                     const SizedBox(width: 6),
-                    Text('${event['date'].toLocal()}'.split('.')[0]),
+                    Text(
+                      event['date'] != null
+                          ? '${event['date']}'.split('.')[0]
+                          : '',
+                    ),
                   ],
                 ),
                 const SizedBox(height: 6),
@@ -151,18 +125,19 @@ class _EventsPageState extends State<EventsPage> {
                   children: [
                     Icon(Icons.location_on, size: 18, color: Colors.teal),
                     const SizedBox(width: 6),
-                    Text(event['location']),
+                    Text(event['location'] ?? ''),
                   ],
                 ),
                 const SizedBox(height: 10),
-                Wrap(
-                  spacing: 8,
-                  children: [
-                    ...event['tags']
-                        .map<Widget>((tag) => Chip(label: Text(tag)))
-                        .toList(),
-                  ],
-                ),
+                if (event['tags'] != null && event['tags'] is List)
+                  Wrap(
+                    spacing: 8,
+                    children: [
+                      ...List<String>.from(
+                        event['tags'],
+                      ).map((tag) => Chip(label: Text(tag))),
+                    ],
+                  ),
                 if (event['organizer'] != null) ...[
                   const SizedBox(height: 10),
                   Row(
@@ -179,7 +154,7 @@ class _EventsPageState extends State<EventsPage> {
                 ],
                 const SizedBox(height: 16),
                 Text(
-                  event['description'],
+                  event['description'] ?? '',
                   style: const TextStyle(fontSize: 16),
                 ),
                 const SizedBox(height: 12),
@@ -200,26 +175,34 @@ class _EventsPageState extends State<EventsPage> {
                     ),
                   ],
                 ),
-                if (event['bookable']) ...[
+                if (event['bookable'] == true) ...[
                   const SizedBox(height: 16),
                   Row(
                     children: [
                       Icon(Icons.event_seat, color: Colors.amber.shade700),
                       const SizedBox(width: 6),
-                      Text('Seats: ${event['seats']} / ${event['cap']}'),
+                      Text(
+                        'Seats: ${event['seats'] ?? 0} / ${event['cap'] ?? 0}',
+                      ),
                     ],
                   ),
                   const SizedBox(height: 10),
-                  event['booked']
+                  bookedEventIds.contains(event['id'])
                       ? ElevatedButton.icon(
                         onPressed: null,
                         icon: const Icon(Icons.check),
                         label: const Text('Booked'),
                       )
                       : ElevatedButton(
-                        onPressed: () {
+                        onPressed: () async {
+                          final supabase = Supabase.instance.client;
+                          await supabase.from('event_bookings').upsert({
+                            'event_id': event['id'],
+                            'user_id': userId,
+                            'booked_at': DateTime.now().toIso8601String(),
+                          });
                           setState(() {
-                            event['booked'] = true;
+                            bookedEventIds.add(event['id']);
                           });
                           Navigator.pop(context);
                         },
@@ -241,201 +224,105 @@ class _EventsPageState extends State<EventsPage> {
       borderRadius: BorderRadius.circular(18),
     );
 
+    if (loading) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+
+    // Sort events by date ascending (chronological)
+    events.sort((a, b) {
+      final aDate = DateTime.tryParse(a['date'] ?? '') ?? DateTime(2100);
+      final bDate = DateTime.tryParse(b['date'] ?? '') ?? DateTime(2100);
+      return aDate.compareTo(bDate);
+    });
+
+    // Filter events by selected day
+    final filteredEvents =
+        _selectedDay == null ? events : _getEventsForDay(_selectedDay!);
+
     return Scaffold(
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
-            // Top Row: Search, Notification Toggle, My Bookings
-            Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    decoration: InputDecoration(
-                      hintText: 'Search events... (name, tag, keyword)',
-                      prefixIcon: const Icon(Icons.search),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide.none,
-                      ),
-                      filled: true,
-                      fillColor: Colors.grey.shade100,
-                      contentPadding: const EdgeInsets.symmetric(
-                        vertical: 0,
-                        horizontal: 8,
-                      ),
+            // Calendar View
+            Card(
+              shape: cardShape,
+              elevation: 4,
+              shadowColor: Colors.black.withOpacity(0.12),
+              margin: const EdgeInsets.only(bottom: 18),
+              child: Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: TableCalendar(
+                  firstDay: DateTime.utc(
+                    _focusedDay.year,
+                    _focusedDay.month,
+                    1,
+                  ),
+                  lastDay: DateTime.utc(
+                    _focusedDay.year,
+                    _focusedDay.month + 1,
+                    0,
+                  ),
+                  focusedDay: _focusedDay,
+                  selectedDayPredicate:
+                      (day) =>
+                          _selectedDay != null &&
+                          day.year == _selectedDay!.year &&
+                          day.month == _selectedDay!.month &&
+                          day.day == _selectedDay!.day,
+                  onDaySelected: (selectedDay, focusedDay) {
+                    setState(() {
+                      _selectedDay = selectedDay;
+                      _focusedDay = focusedDay;
+                    });
+                  },
+                  eventLoader: _getEventsForDay,
+                  calendarStyle: CalendarStyle(
+                    todayDecoration: BoxDecoration(
+                      color: Colors.blue.shade100,
+                      shape: BoxShape.circle,
                     ),
-                    onChanged: (v) => setState(() => searchQuery = v),
+                    selectedDecoration: BoxDecoration(
+                      color: Colors.blue,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  headerStyle: const HeaderStyle(
+                    formatButtonVisible: false,
+                    titleCentered: true,
+                  ),
+                  calendarBuilders: CalendarBuilders(
+                    markerBuilder: (context, day, eventsForDay) {
+                      if (eventsForDay.isNotEmpty) {
+                        return badges.Badge(
+                          badgeContent: Text(
+                            '${eventsForDay.length}',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          badgeStyle: badges.BadgeStyle(
+                            badgeColor: Colors.deepPurple,
+                            padding: const EdgeInsets.all(6),
+                          ),
+                          position: badges.BadgePosition.bottomEnd(
+                            bottom: -8,
+                            end: -8,
+                          ),
+                          child: const SizedBox.shrink(),
+                        );
+                      }
+                      return null;
+                    },
                   ),
                 ),
-                const SizedBox(width: 10),
-                Switch(
-                  value: pushNotifications,
-                  onChanged: (v) => setState(() => pushNotifications = v),
-                  activeColor: Colors.deepPurple,
-                ),
-                const SizedBox(width: 4),
-                const Text('Remind me'),
-                const SizedBox(width: 10),
-                IconButton(
-                  icon: const Icon(Icons.event_available, color: Colors.teal),
-                  tooltip: 'My Bookings',
-                  onPressed: () {
-                    showModalBottomSheet(
-                      context: context,
-                      shape: const RoundedRectangleBorder(
-                        borderRadius: BorderRadius.vertical(
-                          top: Radius.circular(24),
-                        ),
-                      ),
-                      builder: (context) {
-                        return Padding(
-                          padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text(
-                                'My Bookings',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 20,
-                                ),
-                              ),
-                              const SizedBox(height: 12),
-                              if (myBookings.isEmpty)
-                                const Text('No bookings yet.'),
-                              ...myBookings.map(
-                                (event) => ClickyContainer(
-                                  onTap: null,
-                                  child: ListTile(
-                                    leading: const Icon(
-                                      Icons.event,
-                                      color: Colors.deepPurple,
-                                    ),
-                                    title: Text(event['title']),
-                                    subtitle: Text(
-                                      '${event['date'].toLocal()}'.split(
-                                        '.',
-                                      )[0],
-                                    ),
-                                    trailing: TextButton(
-                                      onPressed: () {
-                                        // Cancel booking with warning
-                                        showDialog(
-                                          context: context,
-                                          builder:
-                                              (context) => AlertDialog(
-                                                title: const Text(
-                                                  'Cancel Booking?',
-                                                ),
-                                                content: const Text(
-                                                  'Are you sure? You may not be able to rebook after the deadline.',
-                                                ),
-                                                actions: [
-                                                  TextButton(
-                                                    onPressed:
-                                                        () => Navigator.pop(
-                                                          context,
-                                                        ),
-                                                    child: const Text('No'),
-                                                  ),
-                                                  TextButton(
-                                                    onPressed: () {
-                                                      setState(() {
-                                                        event['booked'] = false;
-                                                      });
-                                                      Navigator.pop(
-                                                        context,
-                                                      ); // close dialog
-                                                      Navigator.pop(
-                                                        context,
-                                                      ); // close sheet
-                                                    },
-                                                    child: const Text(
-                                                      'Yes, Cancel',
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
-                                        );
-                                      },
-                                      child: const Text('Cancel'),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        );
-                      },
-                    );
-                  },
-                ),
-              ],
+              ),
             ),
-            const SizedBox(height: 16),
-            // Filter chips
-            Wrap(
-              spacing: 8,
-              children: [
-                DropdownButton<String>(
-                  value: filterDate,
-                  items: const [
-                    DropdownMenuItem(value: 'All', child: Text('All Dates')),
-                    DropdownMenuItem(value: 'Today', child: Text('Today')),
-                    DropdownMenuItem(
-                      value: 'This Week',
-                      child: Text('This Week'),
-                    ),
-                  ],
-                  onChanged: (v) => setState(() => filterDate = v!),
-                ),
-                DropdownButton<String>(
-                  value: filterType,
-                  items: const [
-                    DropdownMenuItem(value: 'All', child: Text('All Types')),
-                    DropdownMenuItem(value: 'Talk', child: Text('Talk')),
-                    DropdownMenuItem(value: 'Club', child: Text('Club')),
-                    DropdownMenuItem(
-                      value: 'Academic',
-                      child: Text('Academic'),
-                    ),
-                    DropdownMenuItem(
-                      value: 'Workshop',
-                      child: Text('Workshop'),
-                    ),
-                    DropdownMenuItem(value: 'Public', child: Text('Public')),
-                  ],
-                  onChanged: (v) => setState(() => filterType = v!),
-                ),
-                DropdownButton<String>(
-                  value: filterLocation,
-                  items: const [
-                    DropdownMenuItem(
-                      value: 'All',
-                      child: Text('All Locations'),
-                    ),
-                    DropdownMenuItem(value: 'LT-A', child: Text('LT-A')),
-                    DropdownMenuItem(
-                      value: 'LG7 Common Room',
-                      child: Text('LG7 Common Room'),
-                    ),
-                    DropdownMenuItem(value: 'Atrium', child: Text('Atrium')),
-                  ],
-                  onChanged: (v) => setState(() => filterLocation = v!),
-                ),
-                FilterChip(
-                  label: const Text('Bookable Only'),
-                  selected: filterBookable,
-                  onSelected: (v) => setState(() => filterBookable = v),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            // Upcoming Events Feed
+            // Events for selected day
             Text(
-              'Upcoming Events',
+              'Events on ${_selectedDay != null ? "${_selectedDay!.year}-${_selectedDay!.month.toString().padLeft(2, '0')}-${_selectedDay!.day.toString().padLeft(2, '0')}" : 'Selected Day'}',
               style: TextStyle(
                 fontWeight: FontWeight.bold,
                 fontSize: 18,
@@ -459,29 +346,34 @@ class _EventsPageState extends State<EventsPage> {
                       size: 32,
                     ),
                     title: Text(
-                      event['title'],
+                      event['title'] ?? '',
                       style: const TextStyle(fontWeight: FontWeight.bold),
                     ),
                     subtitle: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('${event['date'].toLocal()}'.split('.')[0]),
-                        Text(event['location']),
-                        Wrap(
-                          spacing: 6,
-                          children: [
-                            ...event['tags']
-                                .map<Widget>(
-                                  (tag) => Chip(
-                                    label: Text(tag),
-                                    visualDensity: VisualDensity.compact,
-                                    materialTapTargetSize:
-                                        MaterialTapTargetSize.shrinkWrap,
-                                  ),
-                                )
-                                .toList(),
-                          ],
+                        Text(
+                          event['date'] != null
+                              ? '${event['date']}'.split('.')[0]
+                              : '',
                         ),
+                        Text(event['location'] ?? ''),
+                        if (event['tags'] != null && event['tags'] is List)
+                          Wrap(
+                            spacing: 6,
+                            children: [
+                              ...List<String>.from(event['tags'])
+                                  .map(
+                                    (tag) => Chip(
+                                      label: Text(tag),
+                                      visualDensity: VisualDensity.compact,
+                                      materialTapTargetSize:
+                                          MaterialTapTargetSize.shrinkWrap,
+                                    ),
+                                  )
+                                  .toList(),
+                            ],
+                          ),
                         if (event['organizer'] != null)
                           Text(
                             'Organizer: ${event['organizer']}',
@@ -490,8 +382,86 @@ class _EventsPageState extends State<EventsPage> {
                       ],
                     ),
                     trailing:
-                        event['bookable']
-                            ? (event['booked']
+                        event['bookable'] == true
+                            ? (bookedEventIds.contains(event['id'])
+                                ? const Icon(
+                                  Icons.check_circle,
+                                  color: Colors.green,
+                                )
+                                : const Icon(
+                                  Icons.event_available,
+                                  color: Colors.amber,
+                                ))
+                            : null,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
+            // Upcoming Events (all)
+            Text(
+              'Upcoming Events',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 18,
+                color: textColor,
+              ),
+            ),
+            const SizedBox(height: 8),
+            if (events.isEmpty) const Text('No events found.'),
+            ...events.map(
+              (event) => Card(
+                shape: cardShape,
+                elevation: 4,
+                shadowColor: Colors.black.withOpacity(0.12),
+                margin: const EdgeInsets.only(bottom: 14),
+                child: ClickyContainer(
+                  onTap: () => showEventDetails(event),
+                  child: ListTile(
+                    leading: const Icon(
+                      Icons.event,
+                      color: Colors.deepPurple,
+                      size: 32,
+                    ),
+                    title: Text(
+                      event['title'] ?? '',
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    subtitle: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          event['date'] != null
+                              ? '${event['date']}'.split('.')[0]
+                              : '',
+                        ),
+                        Text(event['location'] ?? ''),
+                        if (event['tags'] != null && event['tags'] is List)
+                          Wrap(
+                            spacing: 6,
+                            children: [
+                              ...List<String>.from(event['tags'])
+                                  .map(
+                                    (tag) => Chip(
+                                      label: Text(tag),
+                                      visualDensity: VisualDensity.compact,
+                                      materialTapTargetSize:
+                                          MaterialTapTargetSize.shrinkWrap,
+                                    ),
+                                  )
+                                  .toList(),
+                            ],
+                          ),
+                        if (event['organizer'] != null)
+                          Text(
+                            'Organizer: ${event['organizer']}',
+                            style: const TextStyle(fontSize: 12),
+                          ),
+                      ],
+                    ),
+                    trailing:
+                        event['bookable'] == true
+                            ? (bookedEventIds.contains(event['id'])
                                 ? const Icon(
                                   Icons.check_circle,
                                   color: Colors.green,

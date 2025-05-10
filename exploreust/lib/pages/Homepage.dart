@@ -1,14 +1,141 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../components/quick_access.dart';
 import '../components/ClickyIconButton.dart';
 
-class Homepage extends StatelessWidget {
+class Homepage extends StatefulWidget {
   const Homepage({super.key});
+
+  @override
+  State<Homepage> createState() => _HomepageState();
+}
+
+class _HomepageState extends State<Homepage> {
+  // Demo user id
+  static const String userId = 'e6be865f-a429-4209-8e57-8c94789f4068';
+
+  Map<String, dynamic>? userProfile;
+  List<Map<String, dynamic>> courses = [];
+  List<Map<String, dynamic>> announcements = [];
+  List<Map<String, dynamic>> bookmarks = [];
+  List<Map<String, dynamic>> savedEvents = [];
+  List<Map<String, dynamic>> linkedServices = [];
+  bool loading = true;
+
+  Icon _courseIcon(String? code) {
+    if (code == null)
+      return const Icon(Icons.class_, color: Colors.grey, size: 28);
+    if (code.startsWith('COMP')) {
+      return const Icon(Icons.computer, color: Colors.blue, size: 28);
+    } else if (code.startsWith('MATH')) {
+      return const Icon(Icons.calculate, color: Colors.green, size: 28);
+    } else if (code.startsWith('HUMA')) {
+      return const Icon(Icons.menu_book, color: Colors.deepPurple, size: 28);
+    }
+    return const Icon(Icons.class_, color: Colors.grey, size: 28);
+  }
+
+  Icon _locationIcon(String? type) {
+    switch (type) {
+      case 'Facility':
+        return const Icon(Icons.local_library, color: Colors.green);
+      case 'Academic':
+        return const Icon(Icons.school, color: Colors.blue);
+      case 'Residence':
+        return const Icon(Icons.home, color: Colors.orange);
+      case 'Canteen':
+        return const Icon(Icons.restaurant, color: Colors.red);
+      default:
+        return const Icon(Icons.place, color: Colors.grey);
+    }
+  }
+
+  Icon _eventIcon(List? tags) {
+    if (tags == null) return const Icon(Icons.event, color: Colors.deepPurple);
+    if (tags.contains('Sports'))
+      return const Icon(Icons.sports_soccer, color: Colors.green);
+    if (tags.contains('Music'))
+      return const Icon(Icons.music_note, color: Colors.pink);
+    if (tags.contains('Academic'))
+      return const Icon(Icons.school, color: Colors.blue);
+    if (tags.contains('Food'))
+      return const Icon(Icons.restaurant, color: Colors.red);
+    return const Icon(Icons.event, color: Colors.deepPurple);
+  }
+
+  Icon _serviceIcon(String? name) {
+    switch (name?.toLowerCase()) {
+      case 'canvas':
+        return const Icon(Icons.school, color: Colors.blue);
+      case 'library':
+        return const Icon(Icons.local_library, color: Colors.green);
+      case 'sis':
+        return const Icon(Icons.account_box, color: Colors.orange);
+      case 'email':
+        return const Icon(Icons.email, color: Colors.red);
+      default:
+        return const Icon(Icons.link, color: Colors.grey);
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchAllData();
+  }
+
+  Future<void> _fetchAllData() async {
+    setState(() {
+      loading = true;
+    });
+    final supabase = Supabase.instance.client;
+    try {
+      final userResp =
+          await supabase.from('users').select().eq('id', userId).single();
+      final coursesResp = await supabase
+          .from('courses')
+          .select()
+          .eq('user_id', userId);
+      final annResp = await supabase
+          .from('announcements')
+          .select()
+          .order('created_at', ascending: false)
+          .limit(3);
+      final bookmarksResp = await supabase
+          .from('bookmarks')
+          .select('*,location:location_id(*)')
+          .eq('user_id', userId);
+      final savedEventsResp = await supabase
+          .from('saved_events')
+          .select('*,event:event_id(*)')
+          .eq('user_id', userId);
+      final linkedResp = await supabase
+          .from('linked_services')
+          .select()
+          .eq('user_id', userId);
+      setState(() {
+        userProfile = userResp;
+        courses = List<Map<String, dynamic>>.from(coursesResp);
+        announcements = List<Map<String, dynamic>>.from(annResp);
+        bookmarks = List<Map<String, dynamic>>.from(bookmarksResp);
+        savedEvents = List<Map<String, dynamic>>.from(savedEventsResp);
+        linkedServices = List<Map<String, dynamic>>.from(linkedResp);
+        loading = false;
+      });
+    } catch (e) {
+      print('Error fetching homepage data: $e');
+      setState(() {
+        loading = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final textColor = Theme.of(context).colorScheme.onSurface;
-
+    if (loading) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
     return Scaffold(
       body: SafeArea(
         child: ListView(
@@ -17,7 +144,6 @@ class Homepage extends StatelessWidget {
             // Top Row: Weather, Canvas, Notification
             Row(
               children: [
-                // Weather indicator
                 Container(
                   decoration: BoxDecoration(
                     color: Colors.blue.shade50,
@@ -39,10 +165,8 @@ class Homepage extends StatelessWidget {
                   ),
                 ),
                 const Spacer(),
-                // To Canvas button
                 ClickyIconButton(icon: Icon(Icons.school), onPressed: () {}),
                 const SizedBox(width: 10),
-                // Notification icon
                 ClickyIconButton(
                   icon: Icon(Icons.notifications_none_rounded),
                   onPressed: () {},
@@ -54,7 +178,7 @@ class Homepage extends StatelessWidget {
             const SizedBox(height: 18),
             // Classes of the Day Card
             Text(
-              'Today\'s Classes',
+              "Today's Classes",
               style: TextStyle(
                 fontWeight: FontWeight.bold,
                 fontSize: 18,
@@ -68,90 +192,31 @@ class Homepage extends StatelessWidget {
               ),
               elevation: 4,
               shadowColor: Colors.black.withOpacity(0.12),
-              child: Column(
-                children: [
-                  ListTile(
-                    leading: const Icon(
-                      Icons.class_,
-                      color: Colors.blue,
-                      size: 28,
-                    ),
-                    title: const Text('COMP4521 - Mobile App Dev'),
-                    subtitle: const Text(
-                      '09:00 - 10:20 | Room 1402 | Prof. Chan',
-                    ),
-                    trailing: ClickyIconButton(
-                      icon: Icon(Icons.map),
-                      onPressed: () {},
-                    ),
-                  ),
-                  ListTile(
-                    leading: const Icon(
-                      Icons.class_,
-                      color: Colors.green,
-                      size: 28,
-                    ),
-                    title: const Text('MATH1010 - Calculus I'),
-                    subtitle: const Text('11:00 - 12:20 | LT-A | Prof. Lee'),
-                    trailing: ClickyIconButton(
-                      icon: Icon(Icons.map),
-                      onPressed: () {},
-                    ),
-                  ),
-                  ListTile(
-                    leading: const Icon(
-                      Icons.class_,
-                      color: Colors.deepPurple,
-                      size: 28,
-                    ),
-                    title: const Text('HUMA1000 - Ethics'),
-                    subtitle: const Text(
-                      '14:00 - 15:20 | Room 2303 | Prof. Wong',
-                    ),
-                    trailing: ClickyIconButton(
-                      icon: Icon(Icons.map),
-                      onPressed: () {},
-                    ),
-                  ),
-                ],
-              ),
+              child:
+                  courses.isEmpty
+                      ? const ListTile(title: Text('No classes today'))
+                      : Column(
+                        children:
+                            courses
+                                .map(
+                                  (course) => ListTile(
+                                    leading: _courseIcon(course['code']),
+                                    title: Text(
+                                      '${course['code']} - ${course['name']}',
+                                    ),
+                                    subtitle: Text(
+                                      '${course['schedule']} | ${course['location']} | ${course['instructor']}',
+                                    ),
+                                    trailing: ClickyIconButton(
+                                      icon: Icon(Icons.map),
+                                      onPressed: () {},
+                                    ),
+                                  ),
+                                )
+                                .toList(),
+                      ),
             ),
             const SizedBox(height: 18),
-
-            // Next Location Shortcut
-            Text(
-              'Next Location',
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 18,
-                color: textColor,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Card(
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(18),
-              ),
-              elevation: 4,
-              shadowColor: Colors.black.withOpacity(0.12),
-              child: ListTile(
-                leading: const Icon(
-                  Icons.location_on,
-                  color: Colors.teal,
-                  size: 32,
-                ),
-                title: const Text(
-                  'Your next class is in Room 1402, Lift 25-26',
-                ),
-                trailing: ClickyIconButton(
-                  icon: Icon(Icons.schedule),
-                  onPressed: () {},
-                ),
-                onTap: () {},
-              ),
-            ),
-            const SizedBox(height: 18),
-
             // Announcements
             Text(
               'Latest Announcements',
@@ -168,28 +233,30 @@ class Homepage extends StatelessWidget {
               ),
               elevation: 4,
               shadowColor: Colors.black.withOpacity(0.12),
-              child: ListTile(
-                leading: const Icon(
-                  Icons.campaign,
-                  color: Colors.amber,
-                  size: 32,
-                ),
-                title: const Text('MATH1010 rescheduled to LT-A at 3PM'),
-                subtitle: const Text(
-                  'Academic notices, campus news, urgent alerts',
-                ),
-                trailing: ClickyIconButton(
-                  icon: Icon(Icons.info_outline),
-                  onPressed: () {},
-                ),
-                onTap: () {},
-              ),
+              child:
+                  announcements.isEmpty
+                      ? const ListTile(title: Text('No announcements'))
+                      : Column(
+                        children:
+                            announcements
+                                .map(
+                                  (a) => ListTile(
+                                    leading: const Icon(
+                                      Icons.campaign,
+                                      color: Colors.amber,
+                                      size: 32,
+                                    ),
+                                    title: Text(a['title'] ?? ''),
+                                    subtitle: Text(a['content'] ?? ''),
+                                  ),
+                                )
+                                .toList(),
+                      ),
             ),
             const SizedBox(height: 18),
-
-            // Event Highlights
+            // Bookmarked Locations
             Text(
-              'Event Highlights',
+              'Bookmarked Locations',
               style: TextStyle(
                 fontWeight: FontWeight.bold,
                 fontSize: 18,
@@ -203,25 +270,30 @@ class Homepage extends StatelessWidget {
               ),
               elevation: 4,
               shadowColor: Colors.black.withOpacity(0.12),
-              child: ListTile(
-                leading: const Icon(
-                  Icons.event,
-                  color: Colors.deepPurple,
-                  size: 32,
-                ),
-                title: const Text('Happening Today: workshops, talks, meetups'),
-                trailing: ClickyIconButton(
-                  icon: Icon(Icons.event_available),
-                  onPressed: () {},
-                ),
-                onTap: () {},
-              ),
+              child:
+                  bookmarks.isEmpty
+                      ? const ListTile(title: Text('No bookmarks'))
+                      : Column(
+                        children:
+                            bookmarks
+                                .map(
+                                  (b) => ListTile(
+                                    leading: _locationIcon(
+                                      b['location']?['type'],
+                                    ),
+                                    title: Text(b['location']?['name'] ?? ''),
+                                    subtitle: Text(
+                                      b['location']?['description'] ?? '',
+                                    ),
+                                  ),
+                                )
+                                .toList(),
+                      ),
             ),
             const SizedBox(height: 18),
-
-            // Canteen Menu Preview
+            // Saved Events
             Text(
-              'Canteen Menu',
+              'Saved Events',
               style: TextStyle(
                 fontWeight: FontWeight.bold,
                 fontSize: 18,
@@ -235,28 +307,28 @@ class Homepage extends StatelessWidget {
               ),
               elevation: 4,
               shadowColor: Colors.black.withOpacity(0.12),
-              child: ListTile(
-                leading: const Icon(
-                  Icons.restaurant_menu,
-                  color: Colors.green,
-                  size: 32,
-                ),
-                title: const Text('LG7, UniBistro, etc.'),
-                subtitle: const Text(
-                  'Daily meal options, crowdedness, wait time',
-                ),
-                trailing: ClickyIconButton(
-                  icon: Icon(Icons.restaurant),
-                  onPressed: () {},
-                ),
-                onTap: () {},
-              ),
+              child:
+                  savedEvents.isEmpty
+                      ? const ListTile(title: Text('No saved events'))
+                      : Column(
+                        children:
+                            savedEvents
+                                .map(
+                                  (e) => ListTile(
+                                    leading: _eventIcon(e['event']?['tags']),
+                                    title: Text(e['event']?['title'] ?? ''),
+                                    subtitle: Text(
+                                      e['event']?['description'] ?? '',
+                                    ),
+                                  ),
+                                )
+                                .toList(),
+                      ),
             ),
             const SizedBox(height: 18),
-
-            // Shuttle Bus Timings
+            // Linked Services
             Text(
-              'Shuttle Bus',
+              'Linked Services',
               style: TextStyle(
                 fontWeight: FontWeight.bold,
                 fontSize: 18,
@@ -270,25 +342,28 @@ class Homepage extends StatelessWidget {
               ),
               elevation: 4,
               shadowColor: Colors.black.withOpacity(0.12),
-              child: ListTile(
-                leading: const Icon(
-                  Icons.directions_bus,
-                  color: Colors.red,
-                  size: 32,
-                ),
-                title: const Text('Next departure to/from HKUST'),
-                trailing: ClickyIconButton(
-                  icon: Icon(Icons.schedule),
-                  onPressed: () {},
-                ),
-                onTap: () {},
-              ),
+              child:
+                  linkedServices.isEmpty
+                      ? const ListTile(title: Text('No linked services'))
+                      : Column(
+                        children:
+                            linkedServices
+                                .map(
+                                  (s) => ListTile(
+                                    leading: _serviceIcon(s['service_name']),
+                                    title: Text(s['service_name'] ?? ''),
+                                    subtitle: Text(
+                                      'Linked at: ${s['linked_at'] ?? ''}',
+                                    ),
+                                  ),
+                                )
+                                .toList(),
+                      ),
             ),
             const SizedBox(height: 18),
-
-            // Weather & Alerts
+            // Profile Info
             Text(
-              'Weather & Alerts',
+              'Profile Info',
               style: TextStyle(
                 fontWeight: FontWeight.bold,
                 fontSize: 18,
@@ -302,21 +377,17 @@ class Homepage extends StatelessWidget {
               ),
               elevation: 4,
               shadowColor: Colors.black.withOpacity(0.12),
-              child: ListTile(
-                leading: const Icon(
-                  Icons.wb_sunny,
-                  color: Colors.orange,
-                  size: 32,
-                ),
-                title: const Text('Plan commutes or outdoor events'),
-                trailing: ClickyIconButton(
-                  icon: Icon(Icons.cloud),
-                  onPressed: () {},
-                ),
-                onTap: () {},
-              ),
+              child:
+                  userProfile == null
+                      ? const ListTile(title: Text('No profile info'))
+                      : ListTile(
+                        leading: const Icon(Icons.person, color: Colors.green),
+                        title: Text(userProfile?['name'] ?? ''),
+                        subtitle: Text(
+                          'Student ID: ${userProfile?['student_id'] ?? ''}\nProgram: ${userProfile?['program'] ?? ''}\nYear: ${userProfile?['year'] ?? ''}',
+                        ),
+                      ),
             ),
-            const SizedBox(height: 18),
           ],
         ),
       ),

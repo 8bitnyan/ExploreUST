@@ -5,8 +5,17 @@ import 'pages/MapPage.dart';
 import 'pages/EventsPage.dart';
 import 'pages/ProfilePage.dart';
 import 'pages/AllPage.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'pages/SplashPage.dart';
+import 'pages/AuthPage.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Supabase.initialize(
+    url: 'https://byhgngvrdzhhzedeqdsb.supabase.co',
+    anonKey:
+        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ5aGduZ3ZyZHpoaHplZGVxZHNiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDU0MjAyNzAsImV4cCI6MjA2MDk5NjI3MH0.0LBPDXe-Wesm04EerxEZ88lLP8PUbM-KdMdFxNhyLa0',
+  );
   runApp(const MyApp());
 }
 
@@ -53,7 +62,11 @@ class MyApp extends StatelessWidget {
           0xFF00897B,
         ), // Teal Green for navigation/highlight
       ),
-      home: const Dashboard(),
+      home: const SplashPage(),
+      routes: {
+        '/home': (context) => const Homepage(),
+        '/auth': (context) => const AuthPage(),
+      },
     );
   }
 }
