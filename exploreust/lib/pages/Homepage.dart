@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../components/quick_access.dart';
 import '../components/ClickyIconButton.dart';
+import 'package:shimmer/shimmer.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 class Homepage extends StatefulWidget {
   const Homepage({super.key});
@@ -21,6 +25,9 @@ class _HomepageState extends State<Homepage> {
   List<Map<String, dynamic>> savedEvents = [];
   List<Map<String, dynamic>> linkedServices = [];
   bool loading = true;
+  double? _temperature;
+  String? _weatherIcon;
+  bool _weatherLoading = true;
 
   Icon _courseIcon(String? code) {
     if (code == null)
@@ -82,6 +89,7 @@ class _HomepageState extends State<Homepage> {
   void initState() {
     super.initState();
     _fetchAllData();
+    _fetchWeather();
   }
 
   Future<void> _fetchAllData() async {
@@ -130,11 +138,114 @@ class _HomepageState extends State<Homepage> {
     }
   }
 
+  Future<void> _fetchWeather() async {
+    setState(() {
+      _weatherLoading = true;
+    });
+    try {
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          setState(() {
+            _weatherLoading = false;
+          });
+          return;
+        }
+      }
+      Position position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.low,
+      );
+      final lat = position.latitude;
+      final lon = position.longitude;
+      const apiKey =
+          '9093d832e8e3629dfc55108478b4703a'; // <-- Replace with your API key
+      final url =
+          'https://api.openweathermap.org/data/2.5/weather?lat=$lat&lon=$lon&units=metric&appid=$apiKey';
+      final response = await http.get(Uri.parse(url));
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        setState(() {
+          _temperature = data['main']['temp']?.toDouble();
+          _weatherIcon = data['weather'][0]['icon'];
+          _weatherLoading = false;
+        });
+      } else {
+        setState(() {
+          _weatherLoading = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _weatherLoading = false;
+      });
+    }
+  }
+
+  Widget _skeletonCard({double height = 80}) {
+    return Card(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+      elevation: 4,
+      shadowColor: Colors.black.withOpacity(0.12),
+      margin: const EdgeInsets.only(bottom: 18),
+      child: Shimmer.fromColors(
+        baseColor: Colors.grey.shade300,
+        highlightColor: Colors.grey.shade100,
+        child: Container(
+          height: height,
+          width: double.infinity,
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      width: double.infinity,
+                      height: 14,
+                      color: Colors.white,
+                    ),
+                    const SizedBox(height: 8),
+                    Container(width: 120, height: 12, color: Colors.white),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final textColor = Theme.of(context).colorScheme.onSurface;
     if (loading) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      return Scaffold(
+        body: SafeArea(
+          child: ListView(
+            padding: const EdgeInsets.all(16),
+            children: [
+              _skeletonCard(),
+              _skeletonCard(),
+              _skeletonCard(),
+              _skeletonCard(height: 120),
+              _skeletonCard(),
+            ],
+          ),
+        ),
+      );
     }
     return Scaffold(
       body: SafeArea(
@@ -154,13 +265,45 @@ class _HomepageState extends State<Homepage> {
                     vertical: 6,
                   ),
                   child: Row(
-                    children: const [
-                      Icon(Icons.wb_sunny, color: Colors.orange, size: 20),
-                      SizedBox(width: 4),
-                      Text(
-                        '28°C',
-                        style: TextStyle(fontWeight: FontWeight.w600),
-                      ),
+                    children: [
+                      if (_weatherLoading)
+                        const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      else if (_weatherIcon != null && _temperature != null)
+                        Row(
+                          children: [
+                            Image.network(
+                              'https://openweathermap.org/img/wn/${_weatherIcon!}@2x.png',
+                              width: 28,
+                              height: 28,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              '${_temperature!.round()}°C',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        )
+                      else
+                        Row(
+                          children: const [
+                            Icon(
+                              Icons.wb_sunny,
+                              color: Colors.orange,
+                              size: 20,
+                            ),
+                            SizedBox(width: 4),
+                            Text(
+                              'N/A',
+                              style: TextStyle(fontWeight: FontWeight.w600),
+                            ),
+                          ],
+                        ),
                     ],
                   ),
                 ),

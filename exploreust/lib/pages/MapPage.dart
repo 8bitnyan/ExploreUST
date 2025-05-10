@@ -5,6 +5,7 @@ import 'package:geolocator/geolocator.dart';
 import 'BusSchedulePage.dart';
 import 'LocationDetailedPage.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:shimmer/shimmer.dart';
 
 class MapPage extends StatefulWidget {
   const MapPage({super.key});
@@ -202,6 +203,48 @@ class _MapPageState extends State<MapPage> {
         );
       }).toSet();
 
+  Widget _skeletonMapCard() {
+    return Card(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+      elevation: 4,
+      shadowColor: Colors.black.withOpacity(0.12),
+      margin: const EdgeInsets.all(16),
+      child: Shimmer.fromColors(
+        baseColor: Colors.grey.shade300,
+        highlightColor: Colors.grey.shade100,
+        child: Container(
+          height: 300,
+          width: double.infinity,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(18),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _skeletonBusCard() {
+    return Card(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+      elevation: 4,
+      shadowColor: Colors.black.withOpacity(0.12),
+      margin: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+      child: Shimmer.fromColors(
+        baseColor: Colors.grey.shade300,
+        highlightColor: Colors.grey.shade100,
+        child: Container(
+          height: 60,
+          width: double.infinity,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(18),
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -254,7 +297,7 @@ class _MapPageState extends State<MapPage> {
             Expanded(
               child:
                   _loadingLocations
-                      ? const Center(child: CircularProgressIndicator())
+                      ? _skeletonMapCard()
                       : Stack(
                         children: [
                           ClipRRect(
@@ -433,7 +476,7 @@ class _MapPageState extends State<MapPage> {
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
               child:
                   _loadingBus
-                      ? const Center(child: CircularProgressIndicator())
+                      ? _skeletonBusCard()
                       : SizedBox(
                         width: double.infinity,
                         child: ElevatedButton.icon(
