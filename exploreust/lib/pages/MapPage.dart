@@ -56,6 +56,7 @@ class _MapPageState extends State<MapPage> {
     if (permission == LocationPermission.deniedForever) return;
 
     Geolocator.getPositionStream().listen((pos) {
+      if (!mounted) return;
       setState(() {
         _userLocation = LatLng(pos.latitude, pos.longitude);
       });
@@ -63,6 +64,7 @@ class _MapPageState extends State<MapPage> {
     });
 
     final pos = await Geolocator.getCurrentPosition();
+    if (!mounted) return;
     setState(() {
       _userLocation = LatLng(pos.latitude, pos.longitude);
     });
@@ -75,12 +77,14 @@ class _MapPageState extends State<MapPage> {
           .from('locations')
           .select()
           .order('name');
+      if (!mounted) return;
       setState(() {
         _locations = List<Map<String, dynamic>>.from(response);
         _loadingLocations = false;
       });
       _updateNearestLocation();
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _loadingLocations = false;
       });
@@ -96,6 +100,7 @@ class _MapPageState extends State<MapPage> {
           response.where((b) => b['direction'] == 'To Campus').toList();
       final fromCampus =
           response.where((b) => b['direction'] == 'From Campus').toList();
+      if (!mounted) return;
       setState(() {
         _busTabs = [
           {
@@ -112,6 +117,7 @@ class _MapPageState extends State<MapPage> {
         _loadingBus = false;
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _loadingBus = false;
       });

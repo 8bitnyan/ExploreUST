@@ -74,43 +74,43 @@ class _AllPageState extends State<AllPage> {
           children: [
             // DEV: Insert mock data button (only in debug mode)
             if (!bool.fromEnvironment('dart.vm.product'))
-              Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: ElevatedButton.icon(
-                  icon: const Icon(Icons.bug_report, color: Colors.red),
-                  label: const Text('Insert Mock Data for Demo User'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.red.shade50,
-                    foregroundColor: Colors.red,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
+              // Padding(
+              //   padding: const EdgeInsets.only(bottom: 12),
+              //   child: ElevatedButton.icon(
+              //     icon: const Icon(Icons.bug_report, color: Colors.red),
+              //     label: const Text('Insert Mock Data for Demo User'),
+              //     style: ElevatedButton.styleFrom(
+              //       backgroundColor: Colors.red.shade50,
+              //       foregroundColor: Colors.red,
+              //       shape: RoundedRectangleBorder(
+              //         borderRadius: BorderRadius.circular(12),
+              //       ),
+              //     ),
+              //     onPressed: () => insertMockDataForDemoUser(context),
+              //   ),
+              // ),
+              // Top Row: User name and action buttons
+              Row(
+                children: [
+                  const Text(
+                    'Alex Paul',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 22),
                   ),
-                  onPressed: () => insertMockDataForDemoUser(context),
-                ),
+                  const Spacer(),
+                  ClickyIconButton(
+                    icon: const Icon(Icons.search, color: Colors.blueAccent),
+                    onPressed: () {},
+                  ),
+                  ClickyIconButton(
+                    icon: const Icon(Icons.support_agent, color: Colors.teal),
+                    onPressed: () {},
+                  ),
+                  ClickyIconButton(
+                    icon: const Icon(Icons.settings, color: Colors.grey),
+                    onPressed: () {},
+                  ),
+                ],
               ),
-            // Top Row: User name and action buttons
-            Row(
-              children: [
-                const Text(
-                  'Alex Paul',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 22),
-                ),
-                const Spacer(),
-                ClickyIconButton(
-                  icon: const Icon(Icons.search, color: Colors.blueAccent),
-                  onPressed: () {},
-                ),
-                ClickyIconButton(
-                  icon: const Icon(Icons.support_agent, color: Colors.teal),
-                  onPressed: () {},
-                ),
-                ClickyIconButton(
-                  icon: const Icon(Icons.settings, color: Colors.grey),
-                  onPressed: () {},
-                ),
-              ],
-            ),
             const SizedBox(height: 18),
 
             // Frequently Used Section (optional)
