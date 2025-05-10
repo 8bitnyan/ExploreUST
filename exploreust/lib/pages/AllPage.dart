@@ -3,6 +3,7 @@ import '../components/ClickyIconButton.dart';
 import '../components/ClickyContainer.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../features/mock_data_tool.dart';
+import '../pages/SettingsPage.dart';
 
 class AllPage extends StatefulWidget {
   const AllPage({super.key});
@@ -12,6 +13,38 @@ class AllPage extends StatefulWidget {
 }
 
 class _AllPageState extends State<AllPage> {
+  String? userName;
+  bool loadingUser = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchUserName();
+  }
+
+  Future<void> _fetchUserName() async {
+    try {
+      final supabase = Supabase.instance.client;
+      // Use the same demo user id as in SettingsPage for now
+      const userId = 'e6be865f-a429-4209-8e57-8c94789f4068';
+      final resp =
+          await supabase
+              .from('users')
+              .select('name')
+              .eq('id', userId)
+              .maybeSingle();
+      setState(() {
+        userName = resp != null ? resp['name'] ?? '' : '';
+        loadingUser = false;
+      });
+    } catch (e) {
+      setState(() {
+        userName = '';
+        loadingUser = false;
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final textColor = Theme.of(context).colorScheme.onSurface;
@@ -92,10 +125,20 @@ class _AllPageState extends State<AllPage> {
               // Top Row: User name and action buttons
               Row(
                 children: [
-                  const Text(
-                    'Alex Paul',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 22),
-                  ),
+                  loadingUser
+                      ? Container(
+                        width: 100,
+                        height: 22,
+                        color: Colors.grey.shade300,
+                        margin: const EdgeInsets.only(right: 8),
+                      )
+                      : Text(
+                        userName ?? '',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 22,
+                        ),
+                      ),
                   const Spacer(),
                   ClickyIconButton(
                     icon: const Icon(Icons.search, color: Colors.blueAccent),
@@ -107,7 +150,13 @@ class _AllPageState extends State<AllPage> {
                   ),
                   ClickyIconButton(
                     icon: const Icon(Icons.settings, color: Colors.grey),
-                    onPressed: () {},
+                    onPressed: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (context) => const SettingsPage(),
+                        ),
+                      );
+                    },
                   ),
                 ],
               ),

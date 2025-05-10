@@ -1,0 +1,19 @@
+{
+  "@@locale": "ko",
+  "appTitle": "익스플로어UST",
+  "settings": "설정",
+  "accountSettings": "계정 설정",
+  "language": "언어",
+  "korean": "한국어",
+  "english": "영어",
+  "notifications": "알림",
+  "darkMode": "다크 모드",
+  "fontSize": "글꼴 크기",
+  "logout": "로그아웃",
+  "dateTimeFormat": "날짜 및 시간 형식",
+  "twelveHour": "12시간제",
+  "twentyFourHour": "24시간제",
+  "accessibilityOptions": "접근성 옵션",
+  "general": "일반",
+  "supportFeedback": "지원 및 피드백"
+}

@@ -6,6 +6,9 @@ import 'package:shimmer/shimmer.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:provider/provider.dart';
+import '../app_settings_controller.dart';
+import 'package:intl/intl.dart';
 
 class Homepage extends StatefulWidget {
   const Homepage({super.key});
@@ -228,6 +231,25 @@ class _HomepageState extends State<Homepage> {
     );
   }
 
+  String formatTime(String time, BuildContext context) {
+    final timeFormat = Provider.of<AppSettingsController>(context).timeFormat;
+    // Assume time is in 'HH:mm' format
+    final parts = time.split(':');
+    if (parts.length != 2) return time;
+    final dt = DateTime(
+      2000,
+      1,
+      1,
+      int.tryParse(parts[0]) ?? 0,
+      int.tryParse(parts[1]) ?? 0,
+    );
+    if (timeFormat == '12h') {
+      return DateFormat('hh:mm a').format(dt);
+    } else {
+      return DateFormat('HH:mm').format(dt);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final textColor = Theme.of(context).colorScheme.onSurface;
@@ -348,7 +370,7 @@ class _HomepageState extends State<Homepage> {
                                       '${course['code']} - ${course['name']}',
                                     ),
                                     subtitle: Text(
-                                      '${course['schedule']} | ${course['location']} | ${course['instructor']}',
+                                      '${formatTime(course['schedule'].split(" - ")[0], context)} - ${formatTime(course['schedule'].split(" - ")[1], context)} | ${course['location']} | ${course['instructor']}',
                                     ),
                                     trailing: ClickyIconButton(
                                       icon: Icon(Icons.map),

@@ -1,0 +1,19 @@
+{
+  "@@locale": "en",
+  "appTitle": "ExploreUST",
+  "settings": "Settings",
+  "accountSettings": "Account Settings",
+  "language": "Language",
+  "korean": "Korean",
+  "english": "English",
+  "notifications": "Notifications",
+  "darkMode": "Dark mode",
+  "fontSize": "Font size",
+  "logout": "Log out",
+  "dateTimeFormat": "Date & time format",
+  "twelveHour": "12-hour",
+  "twentyFourHour": "24-hour",
+  "accessibilityOptions": "Accessibility Options",
+  "general": "General",
+  "supportFeedback": "Support & Feedback"
+}
