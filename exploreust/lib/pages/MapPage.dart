@@ -289,7 +289,166 @@ class _MapPageState extends State<MapPage> {
                   const Spacer(),
                   ClickyIconButton(
                     icon: Icon(Icons.bus_alert_outlined),
-                    onPressed: () {},
+                    onPressed: () {
+                      final now = DateTime.now();
+                      final weekday =
+                          [
+                            'Mon',
+                            'Tue',
+                            'Wed',
+                            'Thu',
+                            'Fri',
+                            'Sat',
+                            'Sun',
+                          ][now.weekday - 1];
+                      final soonBuses = <Map<String, dynamic>>[];
+                      for (final tab in _busTabs) {
+                        for (final sched in (tab['schedules'] as List)) {
+                          final days =
+                              (sched['days'] as List?)?.cast<String>() ?? [];
+                          if (!days.contains(weekday)) continue;
+                          final times =
+                              (sched['times'] as List?)?.cast<String>() ?? [];
+                          for (final t in times) {
+                            final parts = t.split(':');
+                            if (parts.length != 2) continue;
+                            final busTime = DateTime(
+                              now.year,
+                              now.month,
+                              now.day,
+                              int.tryParse(parts[0]) ?? 0,
+                              int.tryParse(parts[1]) ?? 0,
+                            );
+                            final diff = busTime.difference(now).inMinutes;
+                            if (diff >= 0 && diff <= 5) {
+                              soonBuses.add({
+                                'route': sched['route'],
+                                'direction': sched['direction'],
+                                'time': t,
+                              });
+                            }
+                          }
+                        }
+                      }
+                      showModalBottomSheet(
+                        context: context,
+                        shape: const RoundedRectangleBorder(
+                          borderRadius: BorderRadius.vertical(
+                            top: Radius.circular(24),
+                          ),
+                        ),
+                        builder: (context) {
+                          return Padding(
+                            padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                if (soonBuses.isEmpty)
+                                  Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: const [
+                                      Icon(
+                                        Icons.directions_bus,
+                                        color: Colors.indigo,
+                                        size: 40,
+                                      ),
+                                      SizedBox(height: 12),
+                                      Text(
+                                        'No buses arriving in the next 5 minutes.',
+                                        style: TextStyle(
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ],
+                                  )
+                                else ...[
+                                  const ListTile(
+                                    leading: Icon(
+                                      Icons.warning,
+                                      color: Colors.orange,
+                                      size: 32,
+                                    ),
+                                    title: Text(
+                                      'Soon to Arrive Buses',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 17,
+                                      ),
+                                    ),
+                                    subtitle: Text(
+                                      'Arriving within 5 minutes:',
+                                    ),
+                                  ),
+                                  ...soonBuses.map(
+                                    (bus) => ListTile(
+                                      leading: Icon(
+                                        bus['direction'] == 'To Campus'
+                                            ? Icons.arrow_downward
+                                            : Icons.arrow_upward,
+                                        color:
+                                            bus['direction'] == 'To Campus'
+                                                ? Colors.green
+                                                : Colors.blue,
+                                      ),
+                                      title: Text('${bus['route']}'),
+                                      subtitle: Text('${bus['direction']}'),
+                                      trailing: Text(
+                                        bus['time'],
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.red,
+                                          fontSize: 16,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                                const SizedBox(height: 24),
+                                SizedBox(
+                                  width: double.infinity,
+                                  child: ElevatedButton.icon(
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor:
+                                          Theme.of(
+                                            context,
+                                          ).colorScheme.secondary,
+                                      foregroundColor: Colors.white,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(14),
+                                      ),
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 14,
+                                      ),
+                                      elevation: 3,
+                                    ),
+                                    icon: const Icon(Icons.directions_bus),
+                                    label: const Text(
+                                      'See Bus Schedules',
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                    onPressed: () {
+                                      Navigator.of(context).pop();
+                                      Navigator.of(context).push(
+                                        MaterialPageRoute(
+                                          builder:
+                                              (context) =>
+                                                  const BusSchedulePage(),
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      );
+                    },
                   ),
                 ],
               ),
@@ -470,48 +629,6 @@ class _MapPageState extends State<MapPage> {
                             ),
                           ),
                         ],
-                      ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-              child:
-                  _loadingBus
-                      ? _skeletonBusCard()
-                      : SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton.icon(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: accent,
-                            foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(14),
-                            ),
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                            elevation: 3,
-                          ),
-                          icon: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: const [
-                              Icon(Icons.directions_bus, size: 22),
-                              SizedBox(width: 6),
-                              Icon(Icons.arrow_forward, size: 18),
-                            ],
-                          ),
-                          label: const Text(
-                            'See Bus Schedules',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          onPressed: () {
-                            Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (context) => const BusSchedulePage(),
-                              ),
-                            );
-                          },
-                        ),
                       ),
             ),
           ],
