@@ -4,6 +4,7 @@ import '../components/ClickyContainer.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../features/mock_data_tool.dart';
 import '../pages/SettingsPage.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class AllPage extends StatefulWidget {
   const AllPage({super.key});
@@ -397,6 +398,15 @@ class _AllPageState extends State<AllPage> {
                   quickAccessCard(
                     icon: Icons.language,
                     title: 'HKUST Official Website',
+                    onTap: () async {
+                      final url = Uri.parse('https://hkust.edu.hk/');
+                      if (await canLaunchUrl(url)) {
+                        await launchUrl(
+                          url,
+                          mode: LaunchMode.externalApplication,
+                        );
+                      }
+                    },
                   ),
                   quickAccessCard(icon: Icons.school, title: 'Canvas'),
                   quickAccessCard(
