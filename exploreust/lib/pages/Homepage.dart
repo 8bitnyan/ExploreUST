@@ -33,8 +33,9 @@ class _HomepageState extends State<Homepage> {
   bool _weatherLoading = true;
 
   Icon _courseIcon(String? code) {
-    if (code == null)
+    if (code == null) {
       return const Icon(Icons.class_, color: Colors.grey, size: 28);
+    }
     if (code.startsWith('COMP')) {
       return const Icon(Icons.computer, color: Colors.blue, size: 28);
     } else if (code.startsWith('MATH')) {
@@ -62,14 +63,18 @@ class _HomepageState extends State<Homepage> {
 
   Icon _eventIcon(List? tags) {
     if (tags == null) return const Icon(Icons.event, color: Colors.deepPurple);
-    if (tags.contains('Sports'))
+    if (tags.contains('Sports')) {
       return const Icon(Icons.sports_soccer, color: Colors.green);
-    if (tags.contains('Music'))
+    }
+    if (tags.contains('Music')) {
       return const Icon(Icons.music_note, color: Colors.pink);
-    if (tags.contains('Academic'))
+    }
+    if (tags.contains('Academic')) {
       return const Icon(Icons.school, color: Colors.blue);
-    if (tags.contains('Food'))
+    }
+    if (tags.contains('Food')) {
       return const Icon(Icons.restaurant, color: Colors.red);
+    }
     return const Icon(Icons.event, color: Colors.deepPurple);
   }
 

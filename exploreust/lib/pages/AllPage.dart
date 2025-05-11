@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import '../components/ClickyIconButton.dart';
 import '../components/ClickyContainer.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../features/mock_data_tool.dart';
 import '../pages/SettingsPage.dart';
 import 'package:url_launcher/url_launcher.dart';
 

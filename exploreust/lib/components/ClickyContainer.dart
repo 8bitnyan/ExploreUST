@@ -7,8 +7,12 @@ class ClickyContainer extends StatelessWidget {
   final VoidCallback? onTap;
   final ClickyStyle? style;
 
-  const ClickyContainer({Key? key, required this.child, this.onTap, this.style})
-    : super(key: key);
+  const ClickyContainer({
+    super.key,
+    required this.child,
+    this.onTap,
+    this.style,
+  });
 
   @override
   Widget build(BuildContext context) {

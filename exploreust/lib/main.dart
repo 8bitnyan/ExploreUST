@@ -43,9 +43,7 @@ class MyApp extends StatelessWidget {
           primary: Color(0xFF005AAA), // HKUST Blue
           onPrimary: Colors.white,
           secondary: Color(0xFFF9A825), // Golden Yellow
-          onSecondary: Colors.black,
-          background: Color(0xFFF5F5F5), // Light Grey
-          onBackground: Color(0xFF212121), // Dark Charcoal
+          onSecondary: Colors.black, // Dark Charcoal
           surface: Colors.white, // Cards, content blocks
           onSurface: Color(0xFF212121), // Main text
           error: Color(0xFFD32F2F), // Red Accent

@@ -9,12 +9,12 @@ class ClickyIconButton extends StatelessWidget {
   final double? iconSize;
 
   const ClickyIconButton({
-    Key? key,
+    super.key,
     required this.icon,
     this.onPressed,
     this.padding,
     this.iconSize,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

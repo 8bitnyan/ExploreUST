@@ -127,10 +127,12 @@ class _AuthPageState extends State<AuthPage> {
                                 ),
                                 keyboardType: TextInputType.emailAddress,
                                 validator: (value) {
-                                  if (value == null || value.isEmpty)
+                                  if (value == null || value.isEmpty) {
                                     return 'Enter your email';
-                                  if (!_isHKUSTEmail(value))
+                                  }
+                                  if (!_isHKUSTEmail(value)) {
                                     return 'Use your HKUST email';
+                                  }
                                   return null;
                                 },
                               ),

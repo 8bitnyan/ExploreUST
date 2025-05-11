@@ -422,16 +422,14 @@ class _EventsPageState extends State<EventsPage> {
                           Wrap(
                             spacing: 6,
                             children: [
-                              ...List<String>.from(event['tags'])
-                                  .map(
-                                    (tag) => Chip(
-                                      label: Text(tag),
-                                      visualDensity: VisualDensity.compact,
-                                      materialTapTargetSize:
-                                          MaterialTapTargetSize.shrinkWrap,
-                                    ),
-                                  )
-                                  .toList(),
+                              ...List<String>.from(event['tags']).map(
+                                (tag) => Chip(
+                                  label: Text(tag),
+                                  visualDensity: VisualDensity.compact,
+                                  materialTapTargetSize:
+                                      MaterialTapTargetSize.shrinkWrap,
+                                ),
+                              ),
                             ],
                           ),
                         if (event['organizer'] != null)
@@ -500,16 +498,14 @@ class _EventsPageState extends State<EventsPage> {
                           Wrap(
                             spacing: 6,
                             children: [
-                              ...List<String>.from(event['tags'])
-                                  .map(
-                                    (tag) => Chip(
-                                      label: Text(tag),
-                                      visualDensity: VisualDensity.compact,
-                                      materialTapTargetSize:
-                                          MaterialTapTargetSize.shrinkWrap,
-                                    ),
-                                  )
-                                  .toList(),
+                              ...List<String>.from(event['tags']).map(
+                                (tag) => Chip(
+                                  label: Text(tag),
+                                  visualDensity: VisualDensity.compact,
+                                  materialTapTargetSize:
+                                      MaterialTapTargetSize.shrinkWrap,
+                                ),
+                              ),
                             ],
                           ),
                         if (event['organizer'] != null)

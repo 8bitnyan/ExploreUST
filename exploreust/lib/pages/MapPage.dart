@@ -16,7 +16,7 @@ class MapPage extends StatefulWidget {
 
 class _MapPageState extends State<MapPage> {
   GoogleMapController? _mapController;
-  int _busTabIndex = 0;
+  final int _busTabIndex = 0;
   LatLng? _userLocation;
   String? _currentLocationName;
   String? _selectedPath;

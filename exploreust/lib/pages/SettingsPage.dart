@@ -324,9 +324,9 @@ class _SettingsPageState extends State<SettingsPage> {
                                     _updateSetting('language', v);
                                     // Update global locale
                                     Locale? locale;
-                                    if (v == 'English')
+                                    if (v == 'English') {
                                       locale = const Locale('en');
-                                    else if (v == '한국어')
+                                    } else if (v == '한국어')
                                       locale = const Locale('ko');
                                     appSettings.setLocale(locale);
                                   }
